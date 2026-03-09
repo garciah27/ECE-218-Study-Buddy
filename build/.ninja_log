@@ -1259,3 +1259,111 @@
 26240	26791	7946655440017471	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/.bin_timestamp	4fbd1969c79149ca
 26791	26992	7946655440180110	esp-idf/esptool_py/CMakeFiles/app_check_size	e5fa237078d7e9cf
 26791	26992	7946655440180110	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/esp-idf/esptool_py/CMakeFiles/app_check_size	e5fa237078d7e9cf
+380	935	7947196030644883	bootloader-prefix/src/bootloader-stamp/bootloader-build	c9b754d43a996b7c
+380	935	7947196030644883	bootloader/bootloader.elf	c9b754d43a996b7c
+380	935	7947196030644883	bootloader/bootloader.bin	c9b754d43a996b7c
+380	935	7947196030644883	bootloader/bootloader.map	c9b754d43a996b7c
+380	935	7947196030644883	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader-prefix/src/bootloader-stamp/bootloader-build	c9b754d43a996b7c
+380	935	7947196030644883	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader/bootloader.elf	c9b754d43a996b7c
+380	935	7947196030644883	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader/bootloader.bin	c9b754d43a996b7c
+380	935	7947196030644883	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader/bootloader.map	c9b754d43a996b7c
+937	1007	7947196036199804	bootloader-prefix/src/bootloader-stamp/bootloader-install	594f74864c75b260
+937	1007	7947196036199804	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader-prefix/src/bootloader-stamp/bootloader-install	594f74864c75b260
+1007	1163	7947196038381880	CMakeFiles/bootloader-complete	2942bf982882944
+1007	1163	7947196038381880	bootloader-prefix/src/bootloader-stamp/bootloader-done	2942bf982882944
+1007	1163	7947196038381880	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/CMakeFiles/bootloader-complete	2942bf982882944
+1007	1163	7947196038381880	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader-prefix/src/bootloader-stamp/bootloader-done	2942bf982882944
+360	2730	7947196030479198	esp-idf/main/CMakeFiles/__idf_main.dir/main.c.obj	67f253a424adcd8f
+2731	3276	7947196054175197	esp-idf/main/libmain.a	11c630c386c49b1a
+3276	27650	7947196302854698	esp-idf/esp_system/ld/sections.ld	833c7a8b26c95e0d
+3276	27650	7947196302854698	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/esp-idf/esp_system/ld/sections.ld	833c7a8b26c95e0d
+27650	29872	7947196303358813	LCD_display_starter_code.elf	81c96d4717a16bda
+29874	30382	7947196330563215	.bin_timestamp	4fbd1969c79149ca
+29874	30382	7947196330563215	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/.bin_timestamp	4fbd1969c79149ca
+30382	30555	7947196330687463	esp-idf/esptool_py/CMakeFiles/app_check_size	e5fa237078d7e9cf
+30382	30555	7947196330687463	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/esp-idf/esptool_py/CMakeFiles/app_check_size	e5fa237078d7e9cf
+328	732	7947217020420948	bootloader-prefix/src/bootloader-stamp/bootloader-build	c9b754d43a996b7c
+328	732	7947217020420948	bootloader/bootloader.elf	c9b754d43a996b7c
+328	732	7947217020420948	bootloader/bootloader.bin	c9b754d43a996b7c
+328	732	7947217020420948	bootloader/bootloader.map	c9b754d43a996b7c
+328	732	7947217020420948	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader-prefix/src/bootloader-stamp/bootloader-build	c9b754d43a996b7c
+328	732	7947217020420948	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader/bootloader.elf	c9b754d43a996b7c
+328	732	7947217020420948	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader/bootloader.bin	c9b754d43a996b7c
+328	732	7947217020420948	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader/bootloader.map	c9b754d43a996b7c
+733	808	7947217024383946	bootloader-prefix/src/bootloader-stamp/bootloader-install	594f74864c75b260
+733	808	7947217024383946	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader-prefix/src/bootloader-stamp/bootloader-install	594f74864c75b260
+809	966	7947217026701776	CMakeFiles/bootloader-complete	2942bf982882944
+809	966	7947217026701776	bootloader-prefix/src/bootloader-stamp/bootloader-done	2942bf982882944
+809	966	7947217026701776	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/CMakeFiles/bootloader-complete	2942bf982882944
+809	966	7947217026701776	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader-prefix/src/bootloader-stamp/bootloader-done	2942bf982882944
+306	1011	7947217020207990	esp-idf/main/CMakeFiles/__idf_main.dir/main.c.obj	67f253a424adcd8f
+1012	1303	7947217027240096	esp-idf/main/libmain.a	11c630c386c49b1a
+1304	21096	7947217227530808	esp-idf/esp_system/ld/sections.ld	833c7a8b26c95e0d
+1304	21096	7947217227530808	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/esp-idf/esp_system/ld/sections.ld	833c7a8b26c95e0d
+21097	22606	7947217228114644	LCD_display_starter_code.elf	81c96d4717a16bda
+22608	23056	7947217247574933	.bin_timestamp	4fbd1969c79149ca
+22608	23056	7947217247574933	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/.bin_timestamp	4fbd1969c79149ca
+23056	23198	7947217247699151	esp-idf/esptool_py/CMakeFiles/app_check_size	e5fa237078d7e9cf
+23056	23198	7947217247699151	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/esp-idf/esptool_py/CMakeFiles/app_check_size	e5fa237078d7e9cf
+291	486	7947221286085125	esp-idf/esptool_py/CMakeFiles/app_check_size	e5fa237078d7e9cf
+291	486	7947221286085125	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/esp-idf/esptool_py/CMakeFiles/app_check_size	e5fa237078d7e9cf
+273	645	7947221285938264	bootloader-prefix/src/bootloader-stamp/bootloader-build	c9b754d43a996b7c
+273	645	7947221285938264	bootloader/bootloader.elf	c9b754d43a996b7c
+273	645	7947221285938264	bootloader/bootloader.bin	c9b754d43a996b7c
+273	645	7947221285938264	bootloader/bootloader.map	c9b754d43a996b7c
+273	645	7947221285938264	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader-prefix/src/bootloader-stamp/bootloader-build	c9b754d43a996b7c
+273	645	7947221285938264	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader/bootloader.elf	c9b754d43a996b7c
+273	645	7947221285938264	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader/bootloader.bin	c9b754d43a996b7c
+273	645	7947221285938264	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader/bootloader.map	c9b754d43a996b7c
+646	732	7947221289651582	bootloader-prefix/src/bootloader-stamp/bootloader-install	594f74864c75b260
+646	732	7947221289651582	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader-prefix/src/bootloader-stamp/bootloader-install	594f74864c75b260
+733	891	7947221291977210	CMakeFiles/bootloader-complete	2942bf982882944
+733	891	7947221291977210	bootloader-prefix/src/bootloader-stamp/bootloader-done	2942bf982882944
+733	891	7947221291977210	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/CMakeFiles/bootloader-complete	2942bf982882944
+733	891	7947221291977210	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader-prefix/src/bootloader-stamp/bootloader-done	2942bf982882944
+276	638	7947221696661808	bootloader-prefix/src/bootloader-stamp/bootloader-build	c9b754d43a996b7c
+276	638	7947221696661808	bootloader/bootloader.elf	c9b754d43a996b7c
+276	638	7947221696661808	bootloader/bootloader.bin	c9b754d43a996b7c
+276	638	7947221696661808	bootloader/bootloader.map	c9b754d43a996b7c
+276	638	7947221696661808	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader-prefix/src/bootloader-stamp/bootloader-build	c9b754d43a996b7c
+276	638	7947221696661808	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader/bootloader.elf	c9b754d43a996b7c
+276	638	7947221696661808	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader/bootloader.bin	c9b754d43a996b7c
+276	638	7947221696661808	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader/bootloader.map	c9b754d43a996b7c
+640	714	7947221700306091	bootloader-prefix/src/bootloader-stamp/bootloader-install	594f74864c75b260
+640	714	7947221700306091	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader-prefix/src/bootloader-stamp/bootloader-install	594f74864c75b260
+715	867	7947221702453778	CMakeFiles/bootloader-complete	2942bf982882944
+715	867	7947221702453778	bootloader-prefix/src/bootloader-stamp/bootloader-done	2942bf982882944
+715	867	7947221702453778	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/CMakeFiles/bootloader-complete	2942bf982882944
+715	867	7947221702453778	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader-prefix/src/bootloader-stamp/bootloader-done	2942bf982882944
+257	876	7947221696501869	esp-idf/main/CMakeFiles/__idf_main.dir/main.c.obj	67f253a424adcd8f
+877	1114	7947221702678934	esp-idf/main/libmain.a	11c630c386c49b1a
+1114	20146	7947221894770928	esp-idf/esp_system/ld/sections.ld	833c7a8b26c95e0d
+1114	20146	7947221894770928	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/esp-idf/esp_system/ld/sections.ld	833c7a8b26c95e0d
+20147	21667	7947221895379127	LCD_display_starter_code.elf	81c96d4717a16bda
+21669	22107	7947221914906646	.bin_timestamp	4fbd1969c79149ca
+21669	22107	7947221914906646	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/.bin_timestamp	4fbd1969c79149ca
+22108	22250	7947221914988304	esp-idf/esptool_py/CMakeFiles/app_check_size	e5fa237078d7e9cf
+22108	22250	7947221914988304	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/esp-idf/esptool_py/CMakeFiles/app_check_size	e5fa237078d7e9cf
+298	666	7947225216831165	bootloader-prefix/src/bootloader-stamp/bootloader-build	c9b754d43a996b7c
+298	666	7947225216831165	bootloader/bootloader.elf	c9b754d43a996b7c
+298	666	7947225216831165	bootloader/bootloader.bin	c9b754d43a996b7c
+298	666	7947225216831165	bootloader/bootloader.map	c9b754d43a996b7c
+298	666	7947225216831165	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader-prefix/src/bootloader-stamp/bootloader-build	c9b754d43a996b7c
+298	666	7947225216831165	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader/bootloader.elf	c9b754d43a996b7c
+298	666	7947225216831165	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader/bootloader.bin	c9b754d43a996b7c
+298	666	7947225216831165	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader/bootloader.map	c9b754d43a996b7c
+667	741	7947225220509752	bootloader-prefix/src/bootloader-stamp/bootloader-install	594f74864c75b260
+667	741	7947225220509752	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader-prefix/src/bootloader-stamp/bootloader-install	594f74864c75b260
+741	897	7947225222707999	CMakeFiles/bootloader-complete	2942bf982882944
+741	897	7947225222707999	bootloader-prefix/src/bootloader-stamp/bootloader-done	2942bf982882944
+741	897	7947225222707999	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/CMakeFiles/bootloader-complete	2942bf982882944
+741	897	7947225222707999	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader-prefix/src/bootloader-stamp/bootloader-done	2942bf982882944
+277	931	7947225216615021	esp-idf/main/CMakeFiles/__idf_main.dir/main.c.obj	67f253a424adcd8f
+932	1168	7947225223158631	esp-idf/main/libmain.a	11c630c386c49b1a
+1168	20439	7947225417699565	esp-idf/esp_system/ld/sections.ld	833c7a8b26c95e0d
+1168	20439	7947225417699565	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/esp-idf/esp_system/ld/sections.ld	833c7a8b26c95e0d
+20440	21925	7947225418232249	LCD_display_starter_code.elf	81c96d4717a16bda
+21946	22387	7947225437630722	.bin_timestamp	4fbd1969c79149ca
+21946	22387	7947225437630722	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/.bin_timestamp	4fbd1969c79149ca
+22387	22532	7947225437669283	esp-idf/esptool_py/CMakeFiles/app_check_size	e5fa237078d7e9cf
+22387	22532	7947225437669283	C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/esp-idf/esptool_py/CMakeFiles/app_check_size	e5fa237078d7e9cf
