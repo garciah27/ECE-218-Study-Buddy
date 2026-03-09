@@ -94,7 +94,6 @@ void buzzer_task(void *pv)
     }
 }
 
-// ---------------- MAIN ----------------
 void app_main()
 {
     xTaskCreate(lcd_task, "lcd_task", 4096, NULL, 5, NULL);
