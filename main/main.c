@@ -7,57 +7,10 @@
 #define BUZZER GPIO_NUM_10
 #define BUTTON GPIO_NUM_17
 
-void lcd_task(void *pv) 
-{
-    vTaskDelay(pdMS_TO_TICKS(500));   
+// Custom characters
+uint8_t customCharRight[8] = {0x00,0x1B,0x1F,0x0E,0x04,0x00,0x00,0x00};
+uint8_t customCharLeft[8]  = {0x00,0x1B,0x1F,0x1F,0x0E,0x00,0x00,0x00};
 
-    hd44780_t lcd =
-    {
-        .write_cb = NULL,
-        .font = HD44780_FONT_5X8,
-        .lines = 4,
-        .pins = {
-            .rs = GPIO_NUM_38,
-            .e  = GPIO_NUM_37,
-            .d4 = GPIO_NUM_36,
-            .d5 = GPIO_NUM_35,
-            .d6 = GPIO_NUM_48,
-            .d7 = GPIO_NUM_47,
-            .bl = HD44780_NOT_USED
-        }
-    };
-
-    hd44780_init(&lcd);
-    vTaskDelay(pdMS_TO_TICKS(200));
-    hd44780_clear(&lcd);
-
-    // Custom characters
-    uint8_t customCharRight[8] = {0x00,0x1B,0x1F,0x0E,0x04,0x00,0x00,0x00};
-    uint8_t customCharLeft[8]  = {0x00,0x1B,0x1F,0x1F,0x0E,0x00,0x00,0x00};
-
-    hd44780_upload_character(&lcd, 0, customCharRight);  // prints as 0x08
-    hd44780_upload_character(&lcd, 1, customCharLeft);   // prints as 0x09
-
-    // Left icon
-    hd44780_gotoxy(&lcd, 0, 0);
-    hd44780_putc(&lcd, 0x09);
-
-    // Right icons (5)
-    int start_col = 16 - 5;
-    hd44780_gotoxy(&lcd, start_col, 0);
-    for (int i = 0; i < 5; i++) {
-        hd44780_putc(&lcd, 0x08);
-    }
-
-    // Row 2 text
-    hd44780_gotoxy(&lcd, 0, 1);
-    hd44780_puts(&lcd, "In Progress");
-
-    while (1) {
-        // Later you can update the LCD here if needed
-        vTaskDelay(pdMS_TO_TICKS(200));
-    }
-}
 
 void buzzer_task(void *pv)
 {
@@ -96,7 +49,13 @@ void buzzer_task(void *pv)
 
 //------------------------timer and keypad stuff-------------------------------
 //VARIABLES FOR SLIDE SWITCH
-#define switch GPIO_NUM_19
+#define switch_pin GPIO_NUM_20
+
+//CONSTANT VAR for task input
+int HEARTS=0;
+bool enable_set_hearts=true;
+bool hearts_are_set =false;
+
 
 // VARIABLES FOR TIMER
 // Segment pins
@@ -104,10 +63,10 @@ void buzzer_task(void *pv)
 #define SEG_B 40
 #define SEG_C 9
 #define SEG_D 5
-#define SEG_E 4 
+#define SEG_E 6 
 #define SEG_F 41 
 #define SEG_G 10 
-#define SEG_P 6 
+#define SEG_P 4 
 
 // Digit pins
 #define DIG1 11
@@ -123,6 +82,11 @@ bool time_entered = false;
 
 int entered_mins = 0;
 int entered_secs = 0;
+
+bool timer_started = false;     // prevents editing after timer begins
+bool timer_finished = false;    // flag when timer reaches 00:00
+
+bool invalid_time_entered = false; //invalid when seconds entered are more than 59
 
 // VARIABLES FOR KEYPAD
 #define LOOP_DELAY_MS           10      // Loop sampling time (ms)
@@ -164,7 +128,7 @@ const uint8_t segment_map[10] = {
 };
 
 const uint8_t singularSegment[1] = {
-    0b10000000, // decimal point
+    0b01000000, // dash "-"
 };
 
 gpio_num_t segment_pins[8] = {
@@ -187,9 +151,9 @@ char keypad_array[NROWS][NCOLS] = {   // Keypad layout
 //INIT FOR SWITCH
 void init_switch()
 {
-    gpio_reset_pin(switch);
-    gpio_set_direction(switch, GPIO_MODE_INPUT);
-    gpio_pulldown_en(switch);
+    gpio_reset_pin(switch_pin);
+    gpio_set_direction(switch_pin, GPIO_MODE_INPUT);
+    gpio_pullup_en(switch_pin);
 }
 
 // INIT FOR TIMER
@@ -289,20 +253,43 @@ void display_time(int min, int sec) {
 
 }
 
+void display_dash() { 
+    for(int i=0;i<4;i++) { 
+        disable_all_digits(); 
+        set_segments(singularSegment[0]); 
+        enable_digit(i); 
+        vTaskDelay(pdMS_TO_TICKS(2)); 
+    } 
+}
+
 void timer_countdown_task(void *arg) {
     while (1) { //needs to run continiously! do not put any delays here or it will break
-        bool switch_on = gpio_get_level(switch);
+        bool switch_enable = gpio_get_level(switch_pin);
 
-        if(switch_on && time_entered && !countdown_running) { 
+        /* --- timer starts --- */
+        if(switch_enable && time_entered && !timer_started) { 
             mins=entered_mins; 
             secs=entered_secs; 
-            countdown_running=true; 
+            
+            countdown_running = true;
+            timer_started = true; 
+            timer_finished = false;
+ 
         } 
         
-        if(!switch_on) { 
-            countdown_running=false; 
-        } 
-        
+        /* --- pause timer --- */
+        if(!switch_enable && timer_started) 
+        {
+            countdown_running = false;
+        }
+
+        /* --- resume timer --- */
+        if(switch_enable && timer_started) 
+        {
+            countdown_running = true;
+        }
+
+        /* --- countdown process --- */
         if(countdown_running && (mins>0 || secs>0)) { 
             vTaskDelay(pdMS_TO_TICKS(1000)); 
             if(secs==0) { 
@@ -315,6 +302,14 @@ void timer_countdown_task(void *arg) {
                 secs--; 
             }
         }
+
+        /* --- timer finished --- */
+        if (secs==0 && mins==0 && timer_started) {
+            countdown_running = false;
+            timer_finished = true;
+            // printf("OVER");
+        }
+
         else {
             vTaskDelay(pdMS_TO_TICKS(50));
         }
@@ -326,10 +321,14 @@ void display_task(void *arg)
 {
     while (1)
     {
-        if (!countdown_running) {
-            display_time(entered_mins, entered_secs);
-        } else {
+        if (invalid_time_entered) {
+            display_dash(); 
+            continue;
+        }
+        if(timer_started) {
             display_time(mins, secs);
+        } else {
+            display_time(entered_mins, entered_secs);
         }
     }
 }
@@ -366,7 +365,7 @@ char scan_keypad()
     return key;
 }   
 
-void keypad_input_task(void *arg) {
+void keypad_time_input_task(void *arg) {
     int state = WAIT_FOR_PRESS; //state =0
     char new_key = NOPRESS;
     char last_key = NOPRESS;
@@ -375,6 +374,22 @@ void keypad_input_task(void *arg) {
     bool timed_out = false;
 
     while(1) {
+
+        /* --- disable any editing after timer starts --- */
+        if(timer_started) 
+        {
+            char key=scan_keypad(); 
+            if(key=='#') { 
+                mins=0; 
+                secs=0; 
+                timer_finished=true; 
+                countdown_running=false; 
+            }
+
+            vTaskDelay(pdMS_TO_TICKS(LOOP_DELAY_MS));
+            continue;
+        }
+
         //fsm inputs update
         new_key = scan_keypad();
         time += LOOP_DELAY_MS;
@@ -408,6 +423,9 @@ void keypad_input_task(void *arg) {
         } else if (state == WAIT_FOR_RELEASE) {
             if (new_key == NOPRESS) {
                 if(last_key=='*') { 
+                    invalid_time_entered=true; 
+                    vTaskDelay(pdMS_TO_TICKS(1000)); 
+                    invalid_time_entered=false; 
                     digit_index=0; 
                     entered_mins=0; 
                     entered_secs=0; 
@@ -416,13 +434,29 @@ void keypad_input_task(void *arg) {
                 else if(last_key>='0' && last_key<='9' && digit_index<MAX_DIGITS) { 
                     digit_buffer[digit_index++]=last_key; 
                     
-                    if(digit_index==2) { 
-                        entered_mins=(digit_buffer[0]-'0')*10+(digit_buffer[1]-'0');
+                    int temp[4]={0,0,0,0};
+                    for(int i=0;i<digit_index;i++) {
+                        temp[i]=digit_buffer[i]-'0'; 
                     }
-                    if(digit_index==4) { 
-                        entered_secs=(digit_buffer[2]-'0')*10+(digit_buffer[3]-'0'); 
-                        time_entered=true; 
-                    } 
+                    
+                    entered_mins=temp[0]*10 + temp[1]; 
+                    entered_secs=temp[2]*10 + temp[3];
+
+                    //check invalid seconds
+                    if(digit_index==4) {
+                        if (entered_secs>59) {
+                            invalid_time_entered=true; 
+                            vTaskDelay(pdMS_TO_TICKS(1000)); 
+                            invalid_time_entered=false; 
+                            digit_index=0; 
+                            entered_mins=0; 
+                            entered_secs=0; 
+                            time_entered=false;
+                        }
+                        else { 
+                            time_entered=true; 
+                        }
+                    }
                 }
                 state = WAIT_FOR_PRESS;
             }
@@ -432,21 +466,284 @@ void keypad_input_task(void *arg) {
     }
 }
 
+void keypad_hearts_input_task(void *arg) {
+    int state = WAIT_FOR_PRESS;
+    char new_key = NOPRESS;
+    char last_key = NOPRESS;
+
+    int time = 0;
+    bool timed_out = false;
+
+    while(1) {
+        //enter # of hearts
+        new_key = scan_keypad();
+        time += LOOP_DELAY_MS;
+        timed_out = (time >= DEBOUNCE_TIME);
+
+        if (state == WAIT_FOR_PRESS) {
+            if (new_key != NOPRESS) {
+                last_key = new_key;
+                time = 0;
+                state = DEBOUNCE;
+            }
+        }
+
+        else if (state == DEBOUNCE) {
+            if (timed_out && new_key == last_key) {
+                state = WAIT_FOR_RELEASE;
+            }
+            else if (timed_out && new_key != last_key) {
+                state = WAIT_FOR_PRESS;
+            }
+        }
+
+        else if (state == WAIT_FOR_RELEASE) {
+            if (new_key == NOPRESS) {
+                //number is pressed
+                if (last_key >= '0' && last_key <= '9') {
+                    HEARTS = last_key - '0';
+                    // printf("HEARTS set to %d\n", HEARTS);
+                }
+
+                //if * pressed - delete 
+                else if (last_key == '*') {
+                    HEARTS = 0;
+                    hearts_are_set = false;
+                    enable_set_hearts = true;
+                    // printf("HEARTS reset\n");
+                }
+                //if # pressed - confirm and continue
+                else if (last_key == '#') {
+                    hearts_are_set = true; 
+                    enable_set_hearts = false;
+                    // printf("HEARTS confirmed: %d\n", HEARTS);
+                }
+
+                state = WAIT_FOR_PRESS;
+            }
+        }
+        //loop delay
+        vTaskDelay(pdMS_TO_TICKS(LOOP_DELAY_MS));
+    }
+}
+//---------------------------------new tasks----------------------------------
+typedef enum {
+    LCD_STATE_WELCOME_SCREEN = 0,
+    LCD_STATE_ASK_TASK_COUNT,
+    LCD_STATE_CONFIRM_TASK_COUNT,
+    LCD_STATE_DISPLAY_TASK_ICONS,
+    LCD_STATE_ASK_TIME_INPUT,
+    LCD_STATE_CONFIRM_TIME,
+    LCD_STATE_RUNNING
+} lcd_state_t;
+
+typedef enum {
+    KEYPAD_MODE_TASK_COUNT = 0,
+    KEYPAD_MODE_TIME
+} keypad_mode_t;
+
+static lcd_state_t   g_lcd_state      = LCD_STATE_WELCOME_SCREEN;
+static keypad_mode_t g_keypad_mode    = KEYPAD_MODE_TASK_COUNT;
+
+static int g_task_count        = 0;   // 0–9
+static int g_current_task      = 1;   // starts at 1
+static int g_time_digits[4]    = {0};
+static int g_time_digit_index  = 0;
+static int g_entered_minutes   = 0;
+static int g_entered_seconds   = 0;
+
+static bool g_task_count_ready = false;
+static bool g_time_ready       = false;
+
+hd44780_t lcd;
+
+static bool wait_for_confirmation(int timeout_ms) {
+    int elapsed = 0;
+    bool button_pressed = false;
+
+    while (elapsed < timeout_ms) {
+        int btn = gpio_get_level(BUTTON); // active-low
+        int sw  = gpio_get_level(switch_pin); // active-high
+
+        if (btn == 0) {
+            button_pressed = true;
+        }
+        if (button_pressed && sw == 1) {
+            return true;
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(100));
+        elapsed += 100;
+    }
+    return false;
+}
+
+#define LCD_CHAR_LEFT_ICON   0
+#define LCD_CHAR_RIGHT_ICON  1
+
+static void lcd_draw_task_icons(void) {
+    hd44780_clear(&lcd);
+
+    // Row 0: left icon + space
+    hd44780_gotoxy(&lcd, 0, 0);
+    hd44780_putc(&lcd, LCD_CHAR_LEFT_ICON);
+    hd44780_putc(&lcd, ' ');
+
+    // Right-aligned right icons
+    if (g_task_count > 0) {
+        int start_col = 16 - g_task_count;
+        for (int i = 0; i < g_task_count; i++) {
+            hd44780_gotoxy(&lcd, start_col + i, 0);
+            hd44780_putc(&lcd, LCD_CHAR_RIGHT_ICON);
+        }
+    }
+
+    // Row 2: "Task 1 of X"
+    char buf[17];
+    snprintf(buf, sizeof(buf), "Task %d of %d", g_current_task, g_task_count);
+    hd44780_gotoxy(&lcd, 0, 2);
+    hd44780_puts(&lcd, buf);
+}
+
+static void lcd_task(void *arg) {
+    // init LCD (adjust to your real init)
+    hd44780_init(&lcd);
+    hd44780_clear(&lcd);
+
+    while (1) {
+        switch (g_lcd_state {
+
+        case LCD_STATE_WELCOME_SCREEN:
+            hd44780_clear(&lcd);
+            hd44780_gotoxy(&lcd, 4, 1);
+            hd44780_puts(&lcd, "Welcome");
+            vTaskDelay(pdMS_TO_TICKS(2000));
+            g_lcd_state = LCD_STATE_ASK_TASK_COUNT;
+            break;
+
+        case LCD_STATE_ASK_TASK_COUNT:
+            g_keypad_mode = KEYPAD_MODE_TASK_COUNT;
+            g_task_count_ready = false;
+
+            hd44780_clear(&lcd);
+            hd44780_gotoxy(&lcd, 0, 1);
+            hd44780_puts(&lcd, "Tasks? (0-9)");
+            hd44780_gotoxy(&lcd, 0, 2);
+            hd44780_puts(&lcd, "Enter digit");
+
+            while (!g_task_count_ready) {
+                vTaskDelay(pdMS_TO_TICKS(50));
+            }
+            g_lcd_state = LCD_STATE_CONFIRM_TASK_COUNT;
+            break;
+
+        case LCD_STATE_CONFIRM_TASK_COUNT: {
+            hd44780_clear(&lcd);
+            char buf[17];
+
+            hd44780_gotoxy(&lcd, 0, 1);
+            snprintf(buf, sizeof(buf), "%d tasks", g_task_count);
+            hd44780_puts(&lcd, buf);
+
+            hd44780_gotoxy(&lcd, 0, 2);
+            hd44780_puts(&lcd, "Confirm?");
+
+            bool confirmed = wait_for_confirmation(10000);
+            if (confirmed) {
+                g_current_task = 1;
+                g_lcd_state = LCD_STATE_DISPLAY_TASK_ICONS;
+            } else {
+                g_lcd_state = LCD_STATE_ASK_TASK_COUNT;
+            }
+            break;
+        }
+
+        case LCD_STATE_DISPLAY_TASK_ICONS:
+            lcd_draw_task_icons();
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            g_lcd_state = LCD_STATE_ASK_TIME_INPUT;
+            break;
+
+        case LCD_STATE_ASK_TIME_INPUT:
+            g_keypad_mode = KEYPAD_MODE_TIME;
+            g_time_digit_index = 0;
+            g_time_ready = false;
+
+            hd44780_clear(&lcd);
+            hd44780_gotoxy(&lcd, 0, 1);
+            hd44780_puts(&lcd, "Enter time");
+            hd44780_gotoxy(&lcd, 0, 2);
+            hd44780_puts(&lcd, "MMSS:");
+
+            while (!g_time_ready) {
+                vTaskDelay(pdMS_TO_TICKS(50));
+            }
+
+            g_entered_minutes = g_time_digits[0] * 10 + g_time_digits[1];
+            g_entered_seconds = g_time_digits[2] * 10 + g_time_digits[3];
+
+            g_lcd_state = LCD_STATE_CONFIRM_TIME;
+            break;
+
+        case LCD_STATE_CONFIRM_TIME: {
+            hd44780_clear(&lcd);
+
+            hd44780_gotoxy(&lcd, 0, 1);
+            hd44780_puts(&lcd, "Start?");
+
+            char buf[17];
+            snprintf(buf, sizeof(buf), "%02d:%02d", g_entered_minutes, g_entered_seconds);
+            hd44780_gotoxy(&lcd, 0, 2);
+            hd44780_puts(&lcd, buf);
+
+            bool confirmed = wait_for_confirmation(10000);
+            if (confirmed) {
+                // Hand off to your existing timer logic
+                entered_mins = g_entered_minutes;
+                entered_secs = g_entered_seconds;
+                time_entered = true;   // your timer task uses this
+                g_lcd_state = LCD_STATE_RUNNING;
+            } else {
+                g_lcd_state = LCD_STATE_ASK_TIME_INPUT;
+            }
+            break;
+        }
+
+        case LCD_STATE_RUNNING:
+            // Just keep showing icons + "Task 1 of X"
+            lcd_draw_task_icons();
+            vTaskDelay(pdMS_TO_TICKS(500));
+            break;
+
+        default:
+            g_lcd_state = LCD_STATE_WELCOME_SCREEN;
+            break;
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+} 
+
+
+
 void app_main()
 {
+
     xTaskCreate(lcd_task, "lcd_task", 4096, NULL, 5, NULL);
+    xTaskCreate(keypad_hearts_input_task, "keypad_hearts_input_task", 4096, NULL, 5, NULL);
     xTaskCreate(buzzer_task, "buzzer_task", 2048, NULL, 5, NULL);
     //------------------------timer and keypad stuff-------------------------------
-        init_switch();
-    init_keypad();
-    gpio_init_all();
-    disable_all_digits();
+    // init_switch();
+    // init_keypad();
+    // gpio_init_all();
+    // disable_all_digits();
 
-    bool state=gpio_get_level(switch);
-    printf("%d", state);
+    // bool state=gpio_get_level(switch_pin);
+    // printf("%d", state);
 
-    xTaskCreate(keypad_input_task, "keypad_input_task", 2048, NULL, 5, NULL);
-    xTaskCreate(timer_countdown_task, "timer_countdown_task", 2048, NULL, 5, NULL);
-    xTaskCreate(display_task, "display_task", 2048, NULL, 5, NULL);
+    // xTaskCreate(keypad_time_input_task, "keypad_input_task", 2048, NULL, 5, NULL);
+    // xTaskCreate(timer_countdown_task, "timer_countdown_task", 2048, NULL, 5, NULL);
+    // xTaskCreate(display_task, "display_task", 2048, NULL, 5, NULL);
+    
 
 }
