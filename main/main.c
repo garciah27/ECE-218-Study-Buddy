@@ -47,7 +47,7 @@ void buzzer_task(void *pv)
     }
 }
 
-//------------------------timer and keypad stuff-------------------------------
+//-----------------------------------------------timer and keypad stuff---------------------------------------------------------------------------
 //VARIABLES FOR SLIDE SWITCH
 #define switch_pin GPIO_NUM_20
 
@@ -526,7 +526,7 @@ void keypad_hearts_input_task(void *arg) {
         vTaskDelay(pdMS_TO_TICKS(LOOP_DELAY_MS));
     }
 }
-//---------------------------------new tasks----------------------------------
+//-----------------------------------------------------------------new tasks----------------------------------------------------------------------
 typedef enum {
     LCD_STATE_WELCOME_SCREEN = 0,
     LCD_STATE_ASK_TASK_COUNT,
@@ -542,6 +542,7 @@ typedef enum {
     KEYPAD_MODE_TIME
 } keypad_mode_t;
 
+/**
 static lcd_state_t   g_lcd_state      = LCD_STATE_WELCOME_SCREEN;
 static keypad_mode_t g_keypad_mode    = KEYPAD_MODE_TASK_COUNT;
 
@@ -554,6 +555,7 @@ static int g_entered_seconds   = 0;
 
 static bool g_task_count_ready = false;
 static bool g_time_ready       = false;
+*/
 
 hd44780_t lcd;
 
@@ -581,6 +583,8 @@ static bool wait_for_confirmation(int timeout_ms) {
 #define LCD_CHAR_LEFT_ICON   0
 #define LCD_CHAR_RIGHT_ICON  1
 
+
+/*
 static void lcd_draw_task_icons(void) {
     hd44780_clear(&lcd);
 
@@ -604,24 +608,23 @@ static void lcd_draw_task_icons(void) {
     hd44780_gotoxy(&lcd, 0, 2);
     hd44780_puts(&lcd, buf);
 }
+*/
 
+/*
 static void lcd_task(void *arg) {
-    // init LCD (adjust to your real init)
+    // init LCD
     hd44780_init(&lcd);
     hd44780_clear(&lcd);
 
     while (1) {
-        switch (g_lcd_state {
-
-        case LCD_STATE_WELCOME_SCREEN:
+        if (g_lcd_state == LCD_STATE_WELCOME_SCREEN) {
             hd44780_clear(&lcd);
             hd44780_gotoxy(&lcd, 4, 1);
             hd44780_puts(&lcd, "Welcome");
             vTaskDelay(pdMS_TO_TICKS(2000));
             g_lcd_state = LCD_STATE_ASK_TASK_COUNT;
-            break;
-
-        case LCD_STATE_ASK_TASK_COUNT:
+        } 
+        else if (g_lcd_state == LCD_STATE_ASK_TASK_COUNT) {
             g_keypad_mode = KEYPAD_MODE_TASK_COUNT;
             g_task_count_ready = false;
 
@@ -635,9 +638,8 @@ static void lcd_task(void *arg) {
                 vTaskDelay(pdMS_TO_TICKS(50));
             }
             g_lcd_state = LCD_STATE_CONFIRM_TASK_COUNT;
-            break;
-
-        case LCD_STATE_CONFIRM_TASK_COUNT: {
+        } 
+        else if (g_lcd_state == LCD_STATE_CONFIRM_TASK_COUNT) {
             hd44780_clear(&lcd);
             char buf[17];
 
@@ -655,16 +657,13 @@ static void lcd_task(void *arg) {
             } else {
                 g_lcd_state = LCD_STATE_ASK_TASK_COUNT;
             }
-            break;
-        }
-
-        case LCD_STATE_DISPLAY_TASK_ICONS:
+        } 
+        else if (g_lcd_state == LCD_STATE_DISPLAY_TASK_ICONS) {
             lcd_draw_task_icons();
             vTaskDelay(pdMS_TO_TICKS(1000));
             g_lcd_state = LCD_STATE_ASK_TIME_INPUT;
-            break;
-
-        case LCD_STATE_ASK_TIME_INPUT:
+        } 
+        else if (g_lcd_state == LCD_STATE_ASK_TIME_INPUT) {
             g_keypad_mode = KEYPAD_MODE_TIME;
             g_time_digit_index = 0;
             g_time_ready = false;
@@ -683,11 +682,9 @@ static void lcd_task(void *arg) {
             g_entered_seconds = g_time_digits[2] * 10 + g_time_digits[3];
 
             g_lcd_state = LCD_STATE_CONFIRM_TIME;
-            break;
-
-        case LCD_STATE_CONFIRM_TIME: {
+        } 
+        else if (g_lcd_state == LCD_STATE_CONFIRM_TIME) {
             hd44780_clear(&lcd);
-
             hd44780_gotoxy(&lcd, 0, 1);
             hd44780_puts(&lcd, "Start?");
 
@@ -698,52 +695,233 @@ static void lcd_task(void *arg) {
 
             bool confirmed = wait_for_confirmation(10000);
             if (confirmed) {
-                // Hand off to your existing timer logic
                 entered_mins = g_entered_minutes;
                 entered_secs = g_entered_seconds;
-                time_entered = true;   // your timer task uses this
+                time_entered = true;
                 g_lcd_state = LCD_STATE_RUNNING;
             } else {
                 g_lcd_state = LCD_STATE_ASK_TIME_INPUT;
             }
-            break;
-        }
-
-        case LCD_STATE_RUNNING:
-            // Just keep showing icons + "Task 1 of X"
+        } 
+        else if (g_lcd_state == LCD_STATE_RUNNING) {
             lcd_draw_task_icons();
             vTaskDelay(pdMS_TO_TICKS(500));
-            break;
-
-        default:
+        } 
+        else {
+            // This is your 'default' case
             g_lcd_state = LCD_STATE_WELCOME_SCREEN;
-            break;
         }
 
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 } 
+*/
 
+
+void study_manager_task(void *arg)
+{
+    int hearts_remaining = 0;
+    int session;
+
+    /* ---------- LCD custom characters ---------- */
+    hd44780_upload_character(&lcd, 0, customCharLeft);
+    hd44780_upload_character(&lcd, 1, customCharRight);
+
+    /* ---------- WELCOME ---------- */
+    hd44780_clear(&lcd);
+    hd44780_gotoxy(&lcd, 2, 1);
+    hd44780_puts(&lcd, "Welcome!");
+    vTaskDelay(pdMS_TO_TICKS(2000));
+
+    /* ---------- ENTER NUMBER OF HEARTS ---------- */
+    hd44780_clear(&lcd);
+    hd44780_gotoxy(&lcd,0,0);
+    hd44780_puts(&lcd,"Enter sessions");
+    hd44780_gotoxy(&lcd,0,1);
+    hd44780_puts(&lcd,"Press # to OK");
+
+    while(!hearts_are_set)
+    {
+        char buf[16];
+        sprintf(buf,"Hearts:%d", HEARTS);
+        hd44780_gotoxy(&lcd,0,2);
+        hd44780_puts(&lcd,buf);
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
+
+    hearts_remaining = HEARTS;
+
+    /* ---------- MAIN SESSION LOOP ---------- */
+    for(session = 1; session <= HEARTS; session++)
+    {
+        /* ---------- DISPLAY HEARTS ---------- */
+        hd44780_clear(&lcd);
+        hd44780_gotoxy(&lcd,0,0);
+        char buf[32];
+        snprintf(buf,sizeof(buf),"Task %d/%d",session,HEARTS);
+        hd44780_puts(&lcd,buf);
+
+        hd44780_gotoxy(&lcd,0,1);
+
+        for(int i=0;i<hearts_remaining;i++)
+            hd44780_putc(&lcd,1);
+
+        for(int i=hearts_remaining;i<HEARTS;i++)
+            hd44780_putc(&lcd,0);
+
+        vTaskDelay(pdMS_TO_TICKS(2000));
+
+        /* ---------- ENTER TIMER ---------- */
+        hd44780_clear(&lcd);
+        hd44780_gotoxy(&lcd,0,0);
+        hd44780_puts(&lcd,"Enter time MMSS");
+
+        time_entered = false;
+        timer_started = false;
+
+        while(!time_entered)
+            vTaskDelay(pdMS_TO_TICKS(200));
+
+        /* ---------- READY PROMPT ---------- */
+        hd44780_clear(&lcd);
+        hd44780_puts(&lcd,"Ready?");
+        hd44780_gotoxy(&lcd,0,1);
+        hd44780_puts(&lcd,"Flip switch");
+
+        bool ready=false;
+        int elapsed=0;
+
+        while(elapsed < 10000)
+        {
+            if(gpio_get_level(switch_pin))
+            {
+                ready=true;
+                break;
+            }
+
+            elapsed+=200;
+            vTaskDelay(pdMS_TO_TICKS(200));
+        }
+
+        if(!ready)
+        {
+            hd44780_clear(&lcd);
+            hd44780_puts(&lcd,"Not ready");
+            session--;
+            continue;
+        }
+
+        /* ---------- START TIMER ---------- */
+        timer_started = true;
+
+        hd44780_clear(&lcd);
+        hd44780_gotoxy(&lcd,0,0);
+        snprintf(buf,sizeof(buf), "Task %d/%d",session,HEARTS);
+        hd44780_puts(&lcd,buf);
+
+        /* ---------- WAIT UNTIL TIMER ENDS ---------- */
+        while(!timer_finished)
+        {
+            /* skip remaining time */
+            char key = scan_keypad();
+            if(key == '#')
+            {
+                mins = 0;
+                secs = 0;
+                timer_finished = true;
+            }
+
+            vTaskDelay(pdMS_TO_TICKS(100));
+        }
+
+        /* ---------- TASK COMPLETION QUESTION ---------- */
+        hd44780_clear(&lcd);
+        hd44780_puts(&lcd,"Finished?");
+        hd44780_gotoxy(&lcd,0,1);
+        hd44780_puts(&lcd,"Press button");
+
+        bool finished=false;
+
+        for(int i=0;i<50;i++)
+        {
+            if(gpio_get_level(BUTTON)==0)
+            {
+                finished=true;
+                break;
+            }
+
+            vTaskDelay(pdMS_TO_TICKS(100));
+        }
+
+        if(finished)
+        {
+            hd44780_clear(&lcd);
+            hd44780_puts(&lcd,"Great job!");
+
+            for(int i=0;i<5;i++)
+            {
+                hd44780_gotoxy(&lcd,i,1);
+                hd44780_putc(&lcd,1);
+            }
+
+            vTaskDelay(pdMS_TO_TICKS(2000));
+        }
+        else
+        {
+            hearts_remaining--;
+
+            hd44780_clear(&lcd);
+            hd44780_puts(&lcd,"Task failed");
+
+            for(int i=0;i<5;i++)
+            {
+                hd44780_gotoxy(&lcd,i,1);
+                hd44780_putc(&lcd,0);
+            }
+
+            vTaskDelay(pdMS_TO_TICKS(2000));
+        }
+
+        timer_finished=false;
+        timer_started=false;
+    }
+
+    /* ---------- FINAL RESULT ---------- */
+
+    hd44780_clear(&lcd);
+
+    if(hearts_remaining == 0)
+    {
+        hd44780_puts(&lcd,"Keep trying!");
+    }
+    else
+    {
+        hd44780_puts(&lcd,"Well done!");
+    }
+
+    hd44780_gotoxy(&lcd,0,1);
+    hd44780_puts(&lcd,"Stay motivated!");
+
+    while(1)
+        vTaskDelay(pdMS_TO_TICKS(1000));
+}
 
 
 void app_main()
 {
+    init_switch();
+    init_keypad();
+    gpio_init_all();
+    disable_all_digits();
 
-    xTaskCreate(lcd_task, "lcd_task", 4096, NULL, 5, NULL);
-    xTaskCreate(keypad_hearts_input_task, "keypad_hearts_input_task", 4096, NULL, 5, NULL);
-    xTaskCreate(buzzer_task, "buzzer_task", 2048, NULL, 5, NULL);
-    //------------------------timer and keypad stuff-------------------------------
-    // init_switch();
-    // init_keypad();
-    // gpio_init_all();
-    // disable_all_digits();
+    hd44780_init(&lcd);
 
-    // bool state=gpio_get_level(switch_pin);
-    // printf("%d", state);
+    xTaskCreate(keypad_hearts_input_task,"hearts_task",4096,NULL,5,NULL);
+    xTaskCreate(keypad_time_input_task,"time_task",4096,NULL,5,NULL);
+    xTaskCreate(timer_countdown_task,"timer_task",4096,NULL,5,NULL);
+    xTaskCreate(display_task,"7seg_display",4096,NULL,5,NULL);
 
-    // xTaskCreate(keypad_time_input_task, "keypad_input_task", 2048, NULL, 5, NULL);
-    // xTaskCreate(timer_countdown_task, "timer_countdown_task", 2048, NULL, 5, NULL);
-    // xTaskCreate(display_task, "display_task", 2048, NULL, 5, NULL);
-    
+    xTaskCreate(buzzer_task,"buzzer",2048,NULL,5,NULL);
 
+    xTaskCreate(study_manager_task,"study_manager",8192,NULL,6,NULL);
 }
