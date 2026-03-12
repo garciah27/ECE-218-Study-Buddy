@@ -1,11 +1,10 @@
-## What the example does
+## What the code does
 
-* Initializes the driver
-* Uploads custom characters
-* Displays "Hello world!"
-* Displays the custom characters
-* Displays the current sec in a loop
+* Controls the LCD using a keypad
+* LCD and keypad are initialized
+* Runs using tasks
+* There are states that are used to transition between each menu that is displayed on the LCD
+* Displays the custom characters 
+* User interacts with the keypad by pressing certain inputs that control what gets displayed on the LCD
 
-## Wiring
 
-Please see the source code for pins and connections.
