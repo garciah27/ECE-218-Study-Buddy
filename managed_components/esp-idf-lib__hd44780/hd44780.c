@@ -107,7 +107,7 @@ static esp_err_t write_nibble(const hd44780_t *lcd, uint8_t b, bool rs)
     else
     {
         CHECK(gpio_set_level(lcd->pins.rs, rs));
-        ets_delay_us(10); // Address Setup time >= 60ns.
+        ets_delay_us(1); // Address Setup time >= 60ns.
         CHECK(gpio_set_level(lcd->pins.e, true));
         CHECK(gpio_set_level(lcd->pins.d7, (b >> 3) & 1));
         CHECK(gpio_set_level(lcd->pins.d6, (b >> 2) & 1));

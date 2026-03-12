@@ -10,18 +10,18 @@ if(NOT EXISTS "C:/Espressif/frameworks/esp-idf-v5.5.2-2/components/bootloader/su
   file(MAKE_DIRECTORY "C:/Espressif/frameworks/esp-idf-v5.5.2-2/components/bootloader/subproject")
 endif()
 file(MAKE_DIRECTORY
-  "C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader"
-  "C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader-prefix"
-  "C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader-prefix/tmp"
-  "C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader-prefix/src/bootloader-stamp"
-  "C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader-prefix/src"
-  "C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader-prefix/src/bootloader-stamp"
+  "C:/Users/hg271/Downloads/ECE_ 218/Studybuddy1/build/bootloader"
+  "C:/Users/hg271/Downloads/ECE_ 218/Studybuddy1/build/bootloader-prefix"
+  "C:/Users/hg271/Downloads/ECE_ 218/Studybuddy1/build/bootloader-prefix/tmp"
+  "C:/Users/hg271/Downloads/ECE_ 218/Studybuddy1/build/bootloader-prefix/src/bootloader-stamp"
+  "C:/Users/hg271/Downloads/ECE_ 218/Studybuddy1/build/bootloader-prefix/src"
+  "C:/Users/hg271/Downloads/ECE_ 218/Studybuddy1/build/bootloader-prefix/src/bootloader-stamp"
 )
 
 set(configSubDirs )
 foreach(subDir IN LISTS configSubDirs)
-    file(MAKE_DIRECTORY "C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader-prefix/src/bootloader-stamp/${subDir}")
+    file(MAKE_DIRECTORY "C:/Users/hg271/Downloads/ECE_ 218/Studybuddy1/build/bootloader-prefix/src/bootloader-stamp/${subDir}")
 endforeach()
 if(cfgdir)
-  file(MAKE_DIRECTORY "C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader-prefix/src/bootloader-stamp${cfgdir}") # cfgdir has leading slash
+  file(MAKE_DIRECTORY "C:/Users/hg271/Downloads/ECE_ 218/Studybuddy1/build/bootloader-prefix/src/bootloader-stamp${cfgdir}") # cfgdir has leading slash
 endif()

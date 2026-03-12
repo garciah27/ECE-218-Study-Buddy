@@ -3,925 +3,342 @@
 #include <hd44780.h>
 #include <esp_idf_lib_helpers.h>
 #include "driver/gpio.h"
+#include <stdio.h>
+#include <stdlib.h>  // for random cat positions
 
-#define BUZZER GPIO_NUM_10
-#define BUTTON GPIO_NUM_17
-
-// Custom characters
-uint8_t customCharRight[8] = {0x00,0x1B,0x1F,0x0E,0x04,0x00,0x00,0x00};
-uint8_t customCharLeft[8]  = {0x00,0x1B,0x1F,0x1F,0x0E,0x00,0x00,0x00};
-
-
-void buzzer_task(void *pv)
+// ---------------- LCD ----------------
+hd44780_t lcd =
 {
-    //button configuration 
-    gpio_config_t btn_conf = {
-        .pin_bit_mask = (1ULL << BUTTON),
-        .mode = GPIO_MODE_INPUT,
-        .pull_up_en = GPIO_PULLUP_ENABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_DISABLE
-    };
-    gpio_config(&btn_conf);
-
-    //buzzer configuration
-    gpio_reset_pin(BUZZER);
-    gpio_set_direction(BUZZER, GPIO_MODE_OUTPUT);
-    gpio_set_level(BUZZER, 0);
-
-    int prev = 1;       // button not pressed
-    int curr = 1;
-    int buzzer_on = 0;  // buzzer starts OFF
-
-    while (1) {
-        curr = gpio_get_level(BUTTON);
-
-        //detects release 
-        if (prev == 0 && curr == 1) {
-            buzzer_on = !buzzer_on;        // toggle buzzer
-            gpio_set_level(BUZZER, buzzer_on);
-        }
-
-        prev = curr;
-        vTaskDelay(pdMS_TO_TICKS(20));     // debounce
+    .write_cb = NULL,
+    .font = HD44780_FONT_5X8,
+    .lines = 4,
+    .pins = {
+        .rs = GPIO_NUM_38,
+        .e  = GPIO_NUM_37,
+        .d4 = GPIO_NUM_36,
+        .d5 = GPIO_NUM_35,
+        .d6 = GPIO_NUM_48,
+        .d7 = GPIO_NUM_47,
+        .bl = HD44780_NOT_USED
     }
-}
-
-//-----------------------------------------------timer and keypad stuff---------------------------------------------------------------------------
-//VARIABLES FOR SLIDE SWITCH
-#define switch_pin GPIO_NUM_20
-
-//CONSTANT VAR for task input
-int HEARTS=0;
-bool enable_set_hearts=true;
-bool hearts_are_set =false;
-
-
-// VARIABLES FOR TIMER
-// Segment pins
-#define SEG_A 42 
-#define SEG_B 40
-#define SEG_C 9
-#define SEG_D 5
-#define SEG_E 6 
-#define SEG_F 41 
-#define SEG_G 10 
-#define SEG_P 4 
-
-// Digit pins
-#define DIG1 11
-#define DIG2 12
-#define DIG3 13
-#define DIG4 14
-
-int mins = 0;
-int secs = 0;
-
-bool countdown_running = false;
-bool time_entered = false;
-
-int entered_mins = 0;
-int entered_secs = 0;
-
-bool timer_started = false;     // prevents editing after timer begins
-bool timer_finished = false;    // flag when timer reaches 00:00
-
-bool invalid_time_entered = false; //invalid when seconds entered are more than 59
-
-// VARIABLES FOR KEYPAD
-#define LOOP_DELAY_MS           10      // Loop sampling time (ms)
-#define DEBOUNCE_TIME           40      // Debounce time (ms)
-#define NROWS                   4       // Number of keypad rows
-#define NCOLS                   3       // Number of keypad columns
-
-#define ACTIVE                  0       // Keypad active state (0 = low (pullup), 1 = high (pulldown))
-#define NOPRESS                 '\0'    // NOPRESS character
-
-//fsm states
-#define WAIT_FOR_PRESS    0
-#define DEBOUNCE          1
-#define WAIT_FOR_RELEASE  2
-
-int row_pins[] = {GPIO_NUM_3, GPIO_NUM_8, GPIO_NUM_18, GPIO_NUM_17};     // Pin numbers for rows
-int col_pins[] = {GPIO_NUM_16, GPIO_NUM_15, GPIO_NUM_7};   // Pin numbers for columns
-
-//VARIABLES FOR STORING NUMS - KEYPAD AND TIMER COMMUNICATION
-#define MAX_DIGITS 4
-
-char digit_buffer[MAX_DIGITS];
-int digit_index = 0;
-bool input_complete = false;
-
-// SEGMENT MAPS FOR TIMER
-// Segment lookup table
-const uint8_t segment_map[10] = {
-    0b00111111, // 0
-    0b00000110, // 1
-    0b01011011, // 2
-    0b01001111, // 3
-    0b01100110, // 4
-    0b01101101, // 5
-    0b01111101, // 6
-    0b00000111, // 7
-    0b01111111, // 8
-    0b01101111  // 9
 };
 
-const uint8_t singularSegment[1] = {
-    0b01000000, // dash "-"
-};
+// ---------------- KEYPAD ----------------
+#define NROWS 4
+#define NCOLS 4
+#define NOPRESS '\0'
 
-gpio_num_t segment_pins[8] = {
-    SEG_A, SEG_B, SEG_C, SEG_D,
-    SEG_E, SEG_F, SEG_G, SEG_P
-};
+int row_pins[] = {GPIO_NUM_4, GPIO_NUM_5, GPIO_NUM_6, GPIO_NUM_7};
+int col_pins[] = {GPIO_NUM_15, GPIO_NUM_16, GPIO_NUM_17, GPIO_NUM_18};
 
-gpio_num_t digit_pins[4] = {
-    DIG1, DIG2, DIG3, DIG4
-};
-
-// SEGMENT MAPS FOR KEYPAD
-char keypad_array[NROWS][NCOLS] = {   // Keypad layout
-    {'1', '2', '3'},
-    {'4', '5', '6'},
-    {'7', '8', '9'},
-    {'*', '0', '#'}
-};
-
-//INIT FOR SWITCH
-void init_switch()
+char keypad_array[NROWS][NCOLS] =
 {
-    gpio_reset_pin(switch_pin);
-    gpio_set_direction(switch_pin, GPIO_MODE_INPUT);
-    gpio_pullup_en(switch_pin);
-}
+    {'1','2','3','A'},
+    {'4','5','6','B'},
+    {'7','8','9','C'},
+    {'*','0','#','D'}
+};
 
-// INIT FOR TIMER
-void gpio_init_all()
+// ---------------- HEART & CAT GRAPHICS ----------------
+uint8_t heart_char[] = {0x1b, 0x1f, 0x0e, 0x04, 0x00, 0x00, 0x00, 0x00};
+uint8_t broken_heart_char[] = {0x1b, 0x15, 0x0a, 0x04, 0x00, 0x00, 0x00, 0x00};
+uint8_t cat_icon[] = {0x00, 0x00, 0x05, 0x17, 0x0f, 0x0a, 0x00, 0x00};
+
+// ---------------- GAME VARIABLES ----------------
+int state = 0;
+int tasks_total = 0;
+int tasks_done = 0;
+int hearts = 0;
+int max_hearts = 0;
+int prev_state = -1;
+
+// ---------------- INIT KEYPAD ----------------
+void init_keypad()
 {
-    gpio_config_t io_conf = {
-        .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask =
-            (1ULL << SEG_A) |
-            (1ULL << SEG_B) |
-            (1ULL << SEG_C) |
-            (1ULL << SEG_D) |
-            (1ULL << SEG_E) |
-            (1ULL << SEG_F) |
-            (1ULL << SEG_G) |
-            (1ULL << SEG_P) |
-            (1ULL << DIG1) |
-            (1ULL << DIG2) |
-            (1ULL << DIG3) |
-            (1ULL << DIG4)
-    };
-    gpio_config(&io_conf);
-}
-
-// INIT FOR KEYPAD
-void init_keypad(void) {
-    // Configure row pins as outputs
-    for (int i=0; i<NROWS; i++){
+    for(int i=0;i<NROWS;i++)
+    {
         gpio_reset_pin(row_pins[i]);
-        gpio_set_direction(row_pins[i], GPIO_MODE_OUTPUT);
-        //rows stay inactive at the beginning
-        if (ACTIVE == 0)
-        { gpio_set_level(row_pins[i], 1); }   // inactive = high
-        else
-        { gpio_set_level(row_pins[i], 0); }   // inactive = low
+        gpio_set_direction(row_pins[i],GPIO_MODE_OUTPUT);
+        gpio_set_level(row_pins[i],1);
     }
-    // Configure col pins as outputs w pullup or pulldown
-    for (int i=0; i<NCOLS; i++){
+
+    for(int i=0;i<NCOLS;i++)
+    {
         gpio_reset_pin(col_pins[i]);
-        gpio_set_direction(col_pins[i], GPIO_MODE_INPUT);
-        if (ACTIVE == 0)
-        {
-            // when active low, use pullup
-            gpio_pullup_en(col_pins[i]);
-            gpio_pulldown_dis(col_pins[i]);
-        }
-        else
-        {
-            // when active high, use pulldown
-            gpio_pulldown_en(col_pins[i]);
-            gpio_pullup_dis(col_pins[i]);
-        }
+        gpio_set_direction(col_pins[i],GPIO_MODE_INPUT);
+        gpio_pullup_en(col_pins[i]);
     }
 }
 
-//METHODS FOR TIMER
-void set_segments(uint8_t value)
-{
-    for (int i = 0; i < 8; i++)
-    {
-        gpio_set_level(segment_pins[i], (value >> i) & 0x01);
-    }
-}
-
-void disable_all_digits()
-{
-    for (int i = 0; i < 4; i++)
-        gpio_set_level(digit_pins[i], 1);
-}
-
-void enable_digit(int digit)
-{
-    gpio_set_level(digit_pins[digit], 0);
-}
-
-void display_time(int min, int sec) {
-    int digitsOnDisplay[4];
-
-    digitsOnDisplay[0] = min / 10;
-    digitsOnDisplay[1] = min % 10;
-    digitsOnDisplay[2] = sec / 10;
-    digitsOnDisplay[3] = sec % 10;
-
-    for (int i = 0; i < 4; i++)
-    {
-        disable_all_digits();
-        uint8_t numToDsiplay = segment_map[digitsOnDisplay[i]];
-
-        // add decimal point after minutes
-        if (i == 1) {
-            numToDsiplay |= 0b10000000;
-        }
-        set_segments(numToDsiplay);
-        enable_digit(i);
-        vTaskDelay(pdMS_TO_TICKS(2));
-    }
-
-}
-
-void display_dash() { 
-    for(int i=0;i<4;i++) { 
-        disable_all_digits(); 
-        set_segments(singularSegment[0]); 
-        enable_digit(i); 
-        vTaskDelay(pdMS_TO_TICKS(2)); 
-    } 
-}
-
-void timer_countdown_task(void *arg) {
-    while (1) { //needs to run continiously! do not put any delays here or it will break
-        bool switch_enable = gpio_get_level(switch_pin);
-
-        /* --- timer starts --- */
-        if(switch_enable && time_entered && !timer_started) { 
-            mins=entered_mins; 
-            secs=entered_secs; 
-            
-            countdown_running = true;
-            timer_started = true; 
-            timer_finished = false;
- 
-        } 
-        
-        /* --- pause timer --- */
-        if(!switch_enable && timer_started) 
-        {
-            countdown_running = false;
-        }
-
-        /* --- resume timer --- */
-        if(switch_enable && timer_started) 
-        {
-            countdown_running = true;
-        }
-
-        /* --- countdown process --- */
-        if(countdown_running && (mins>0 || secs>0)) { 
-            vTaskDelay(pdMS_TO_TICKS(1000)); 
-            if(secs==0) { 
-                if(mins>0) { 
-                    mins--; 
-                    secs=59; 
-                } 
-            } else 
-            {
-                secs--; 
-            }
-        }
-
-        /* --- timer finished --- */
-        if (secs==0 && mins==0 && timer_started) {
-            countdown_running = false;
-            timer_finished = true;
-            // printf("OVER");
-        }
-
-        else {
-            vTaskDelay(pdMS_TO_TICKS(50));
-        }
-    }
-}
-
-//display task
-void display_task(void *arg)
-{
-    while (1)
-    {
-        if (invalid_time_entered) {
-            display_dash(); 
-            continue;
-        }
-        if(timer_started) {
-            display_time(mins, secs);
-        } else {
-            display_time(entered_mins, entered_secs);
-        }
-    }
-}
-
-//METHODS FOR KEYPAD
+// ---------------- SCAN KEYPAD ----------------
 char scan_keypad()
 {
-    char key = NOPRESS;
-    for (int r = 0; r < NROWS; r++)
+    for(int r=0;r<NROWS;r++)
     {
-        //set one row ACTIVE at a time, all others are inactive
-        for (int ra = 0; ra < NROWS; ra++)
+        for(int i=0;i<NROWS;i++)
+            gpio_set_level(row_pins[i],1);
+
+        gpio_set_level(row_pins[r],0);
+
+        for(int c=0;c<NCOLS;c++)
         {
-            if (ra == r)
-            { gpio_set_level(row_pins[ra], ACTIVE);}
-            else
-            { gpio_set_level(row_pins[ra], !ACTIVE);}
+            if(gpio_get_level(col_pins[c]) == 0)
+                return keypad_array[r][c];
         }
-        //scan cols & check for any column inputs being ACTIVE
-        for (int c = 0; c < NCOLS; c++)
+    }
+
+    return NOPRESS;
+}
+
+// ---------------- DRAW HEARTS ----------------
+void draw_hearts()
+{
+    for(int i=0;i<max_hearts;i++)
+    {
+        if(i < hearts)
+            hd44780_putc(&lcd,0);  // full heart
+        else
+            hd44780_putc(&lcd,1);  // broken heart
+    }
+}
+
+// ---------------- DRAW CAT ----------------
+void draw_cat(int col, int row)
+{
+    hd44780_upload_character(&lcd, 2, cat_icon);
+    hd44780_gotoxy(&lcd, col, row);
+    hd44780_putc(&lcd, 2);
+}
+
+// ---------------- LCD GAME TASK ----------------
+void lcd_game_task(void *pv)
+{
+    vTaskDelay(pdMS_TO_TICKS(500));
+    hd44780_init(&lcd);
+
+    // load custom characters
+    hd44780_upload_character(&lcd,0,heart_char);
+    hd44780_upload_character(&lcd,1,broken_heart_char);
+
+    hd44780_clear(&lcd);
+
+    char buffer[20];
+
+    int cat_col = 0;
+    int cat_row = 3; // default row
+    int cat_dir = 1; // direction
+
+    while(1)
+    {
+        char key = scan_keypad();
+
+        if(hearts <= 0 && tasks_total > 0)
+            state = 6;
+
+        if(state != prev_state)
         {
-            if (gpio_get_level(col_pins[c]) == ACTIVE) //if key at [r][c] is active
+            hd44780_clear(&lcd);
+            prev_state = state;
+        }
+
+        // -------- WELCOME --------
+        if(state == 0)
+        {
+            char text[] = "Welcome!";
+            int start_col = 4;
+
+            for(int i=0;text[i]!='\0';i++)
             {
-                key = keypad_array[r][c];
-                // Restore rows to inactive state before returning
-                for (int i = 0; i < NROWS; i++)
-                {
-                    gpio_set_level(row_pins[i], !ACTIVE);
-                }
-                return key;
+                hd44780_gotoxy(&lcd,start_col+i,1);
+                hd44780_putc(&lcd,text[i]);
+                vTaskDelay(pdMS_TO_TICKS(200));
             }
+
+            vTaskDelay(pdMS_TO_TICKS(500));
+            state = 1;
         }
-    }
-    return key;
-}   
+        //-------- TASK COUNT ----------
 
-void keypad_time_input_task(void *arg) {
-    int state = WAIT_FOR_PRESS; //state =0
-    char new_key = NOPRESS;
-    char last_key = NOPRESS;
-
-    int time = 0;
-    bool timed_out = false;
-
-    while(1) {
-
-        /* --- disable any editing after timer starts --- */
-        if(timer_started) 
+        else if(state == 1)
         {
-            char key=scan_keypad(); 
-            if(key=='#') { 
-                mins=0; 
-                secs=0; 
-                timer_finished=true; 
-                countdown_running=false; 
-            }
+            hd44780_gotoxy(&lcd,0,0);
+            hd44780_puts(&lcd,"How many tasks?");
 
-            vTaskDelay(pdMS_TO_TICKS(LOOP_DELAY_MS));
-            continue;
+            hd44780_gotoxy(&lcd,0,1);
+            hd44780_puts(&lcd,"Press 1-9");
+
+            if(key >= '1' && key <= '9')
+            {
+                tasks_total = key - '0';
+                hearts = tasks_total;
+                max_hearts = tasks_total;
+                tasks_done = 0;
+
+                state = 2;
+            }
         }
 
-        //fsm inputs update
-        new_key = scan_keypad();
-        time += LOOP_DELAY_MS;
-        timed_out = (time >= DEBOUNCE_TIME);
-        
-        if (countdown_running)
+        // -------- INSTRUCTIONS --------
+        else if(state == 2)
         {
-            vTaskDelay(pdMS_TO_TICKS(LOOP_DELAY_MS));
-            continue;
+            hd44780_gotoxy(&lcd,0,0);
+            hd44780_puts(&lcd,"Set Timer Now");
+
+            hd44780_gotoxy(&lcd,0,1);
+            hd44780_puts(&lcd,"Press A");
+
+            hd44780_gotoxy(&lcd,0,2);
+            hd44780_puts(&lcd,"To Continue");
+
+            if(key == 'A')
+                state = 3;
         }
 
-        new_key=scan_keypad(); 
-        time+=LOOP_DELAY_MS; 
-        timed_out=(time>=DEBOUNCE_TIME);
 
-        if (state == WAIT_FOR_PRESS) {
-            if (new_key != NOPRESS) {
-                last_key = new_key;   // store first detection
-                time = 0;             // start debounce timer
-                state = DEBOUNCE;
-            }
-        } else if (state == DEBOUNCE){
-            if (timed_out && new_key == last_key) { 
-                // key is stable long enough → valid press
-                state = WAIT_FOR_RELEASE; 
-            }
-            else if (timed_out && new_key != last_key) {
-                // key changed during debounce → glitch/bounce
-                state = WAIT_FOR_PRESS;
-            }
-        } else if (state == WAIT_FOR_RELEASE) {
-            if (new_key == NOPRESS) {
-                if(last_key=='*') { 
-                    invalid_time_entered=true; 
-                    vTaskDelay(pdMS_TO_TICKS(1000)); 
-                    invalid_time_entered=false; 
-                    digit_index=0; 
-                    entered_mins=0; 
-                    entered_secs=0; 
-                    time_entered=false; 
-                }
-                else if(last_key>='0' && last_key<='9' && digit_index<MAX_DIGITS) { 
-                    digit_buffer[digit_index++]=last_key; 
-                    
-                    int temp[4]={0,0,0,0};
-                    for(int i=0;i<digit_index;i++) {
-                        temp[i]=digit_buffer[i]-'0'; 
-                    }
-                    
-                    entered_mins=temp[0]*10 + temp[1]; 
-                    entered_secs=temp[2]*10 + temp[3];
+        // -------- TASK MENU --------
+        else if(state == 3)
+        {
+            sprintf(buffer,"%d/%d tasks",tasks_done,tasks_total);
+            hd44780_gotoxy(&lcd,0,0);
+            hd44780_puts(&lcd,buffer);
 
-                    //check invalid seconds
-                    if(digit_index==4) {
-                        if (entered_secs>59) {
-                            invalid_time_entered=true; 
-                            vTaskDelay(pdMS_TO_TICKS(1000)); 
-                            invalid_time_entered=false; 
-                            digit_index=0; 
-                            entered_mins=0; 
-                            entered_secs=0; 
-                            time_entered=false;
-                        }
-                        else { 
-                            time_entered=true; 
-                        }
-                    }
-                }
-                state = WAIT_FOR_PRESS;
-            }
+            hd44780_gotoxy(&lcd,0,1);
+            hd44780_puts(&lcd,"Hearts:");
+
+            hd44780_gotoxy(&lcd,0,2);
+            draw_hearts();
+
+            hd44780_gotoxy(&lcd,0,3);
+            hd44780_puts(&lcd,"Press B");
+
+            // Animate cat on bottom row
+            draw_cat(cat_col, cat_row);
+            cat_col += cat_dir;
+            if(cat_col >= 15 || cat_col <= 0) cat_dir *= -1;
+
+            if(key == 'B')
+                state = 4;
         }
-        //loop delay
-        vTaskDelay(pdMS_TO_TICKS(LOOP_DELAY_MS));
-    }
-}
 
-void keypad_hearts_input_task(void *arg) {
-    int state = WAIT_FOR_PRESS;
-    char new_key = NOPRESS;
-    char last_key = NOPRESS;
+        // -------- TASK CHECK --------
+        else if(state == 4)
+        {
+            hd44780_gotoxy(&lcd,0,0);
+            hd44780_puts(&lcd,"Finished task?");
 
-    int time = 0;
-    bool timed_out = false;
+            hd44780_gotoxy(&lcd,0,1);
+            hd44780_puts(&lcd,"C=Yes  D=No");
 
-    while(1) {
-        //enter # of hearts
-        new_key = scan_keypad();
-        time += LOOP_DELAY_MS;
-        timed_out = (time >= DEBOUNCE_TIME);
+            // Animate cat
+            draw_cat(cat_col, cat_row);
+            cat_col += cat_dir;
+            if(cat_col >= 15 || cat_col <= 0) cat_dir *= -1;
 
-        if (state == WAIT_FOR_PRESS) {
-            if (new_key != NOPRESS) {
-                last_key = new_key;
-                time = 0;
-                state = DEBOUNCE;
+            if(key == 'C')
+            {
+                tasks_done++;
+                state = 3;
+            }
+            else if(key == 'D')
+            {
+                hearts--;
+                state = 3;
+            }
+
+            if(tasks_done >= tasks_total)
+            {
+                if(hearts > 0)
+                    state = 5;
+                else
+                    state = 6;
             }
         }
 
-        else if (state == DEBOUNCE) {
-            if (timed_out && new_key == last_key) {
-                state = WAIT_FOR_RELEASE;
-            }
-            else if (timed_out && new_key != last_key) {
-                state = WAIT_FOR_PRESS;
-            }
-        }
+        // -------- CONGRATS --------
+        else if(state == 5)
+        {
+            int pos_index = 0;
+            while(1)
+            {
+                hd44780_clear(&lcd);
 
-        else if (state == WAIT_FOR_RELEASE) {
-            if (new_key == NOPRESS) {
-                //number is pressed
-                if (last_key >= '0' && last_key <= '9') {
-                    HEARTS = last_key - '0';
-                    // printf("HEARTS set to %d\n", HEARTS);
-                }
+                hd44780_gotoxy(&lcd,1,0);
+                hd44780_puts(&lcd,"* CONGRATS! *");
 
-                //if * pressed - delete 
-                else if (last_key == '*') {
-                    HEARTS = 0;
-                    hearts_are_set = false;
-                    enable_set_hearts = true;
-                    // printf("HEARTS reset\n");
-                }
-                //if # pressed - confirm and continue
-                else if (last_key == '#') {
-                    hearts_are_set = true; 
-                    enable_set_hearts = false;
-                    // printf("HEARTS confirmed: %d\n", HEARTS);
-                }
+                hd44780_gotoxy(&lcd,1,1);
+                hd44780_puts(&lcd,"All Tasks Done");
 
-                state = WAIT_FOR_PRESS;
+                if(pos_index % 2 == 0)
+                    hd44780_gotoxy(&lcd,0,2), hd44780_puts(&lcd,"*  *  *  *  *");
+                else
+                    hd44780_gotoxy(&lcd,0,2), hd44780_puts(&lcd,"  *  *  *  * ");
+
+                // Animate cat randomly
+                cat_col = rand() % 16;
+                cat_row = rand() % 4;
+                draw_cat(cat_col, cat_row);
+
+                pos_index++;
+                vTaskDelay(pdMS_TO_TICKS(400));
             }
         }
-        //loop delay
-        vTaskDelay(pdMS_TO_TICKS(LOOP_DELAY_MS));
-    }
-}
-//-----------------------------------------------------------------new tasks----------------------------------------------------------------------
-typedef enum {
-    LCD_STATE_WELCOME_SCREEN = 0,
-    LCD_STATE_ASK_TASK_COUNT,
-    LCD_STATE_CONFIRM_TASK_COUNT,
-    LCD_STATE_DISPLAY_TASK_ICONS,
-    LCD_STATE_ASK_TIME_INPUT,
-    LCD_STATE_CONFIRM_TIME,
-    LCD_STATE_RUNNING
-} lcd_state_t;
 
-typedef enum {
-    KEYPAD_MODE_TASK_COUNT = 0,
-    KEYPAD_MODE_TIME
-} keypad_mode_t;
+        // -------- GAME OVER --------
+        else if(state == 6)
+        {
+            int pos_index = 0;
+            while(1)
+            {
+                hd44780_clear(&lcd);
 
-/**
-static lcd_state_t   g_lcd_state      = LCD_STATE_WELCOME_SCREEN;
-static keypad_mode_t g_keypad_mode    = KEYPAD_MODE_TASK_COUNT;
+                hd44780_gotoxy(&lcd,3,0);
+                hd44780_puts(&lcd,"GAME OVER");
 
-static int g_task_count        = 0;   // 0–9
-static int g_current_task      = 1;   // starts at 1
-static int g_time_digits[4]    = {0};
-static int g_time_digit_index  = 0;
-static int g_entered_minutes   = 0;
-static int g_entered_seconds   = 0;
+                hd44780_gotoxy(&lcd,1,1);
+                hd44780_puts(&lcd,"X   X   X");
 
-static bool g_task_count_ready = false;
-static bool g_time_ready       = false;
-*/
+                hd44780_gotoxy(&lcd,0,2);
+                hd44780_puts(&lcd," X   X   X");
 
-hd44780_t lcd;
+                hd44780_gotoxy(&lcd,2,3);
+                hd44780_puts(&lcd,"X   X");
 
-static bool wait_for_confirmation(int timeout_ms) {
-    int elapsed = 0;
-    bool button_pressed = false;
+                // Animate cat on bottom row
+                draw_cat(cat_col, cat_row);
+                cat_col += cat_dir;
+                if(cat_col >= 15 || cat_col <= 0) cat_dir *= -1;
 
-    while (elapsed < timeout_ms) {
-        int btn = gpio_get_level(BUTTON); // active-low
-        int sw  = gpio_get_level(switch_pin); // active-high
+                vTaskDelay(pdMS_TO_TICKS(400));
 
-        if (btn == 0) {
-            button_pressed = true;
-        }
-        if (button_pressed && sw == 1) {
-            return true;
+                hd44780_clear(&lcd);
+
+                hd44780_gotoxy(&lcd,3,0);
+                hd44780_puts(&lcd,"GAME OVER");
+
+                hd44780_gotoxy(&lcd,0,1);
+                hd44780_puts(&lcd," X   X   X");
+
+                hd44780_gotoxy(&lcd,2,2);
+                hd44780_puts(&lcd,"X   X");
+
+                hd44780_gotoxy(&lcd,1,3);
+                hd44780_puts(&lcd,"X   X   X");
+
+                draw_cat(cat_col, cat_row);
+                cat_col += cat_dir;
+                if(cat_col >= 15 || cat_col <= 0) cat_dir *= -1;
+
+                vTaskDelay(pdMS_TO_TICKS(400));
+            }
         }
 
         vTaskDelay(pdMS_TO_TICKS(100));
-        elapsed += 100;
     }
-    return false;
 }
 
-#define LCD_CHAR_LEFT_ICON   0
-#define LCD_CHAR_RIGHT_ICON  1
-
-
-/*
-static void lcd_draw_task_icons(void) {
-    hd44780_clear(&lcd);
-
-    // Row 0: left icon + space
-    hd44780_gotoxy(&lcd, 0, 0);
-    hd44780_putc(&lcd, LCD_CHAR_LEFT_ICON);
-    hd44780_putc(&lcd, ' ');
-
-    // Right-aligned right icons
-    if (g_task_count > 0) {
-        int start_col = 16 - g_task_count;
-        for (int i = 0; i < g_task_count; i++) {
-            hd44780_gotoxy(&lcd, start_col + i, 0);
-            hd44780_putc(&lcd, LCD_CHAR_RIGHT_ICON);
-        }
-    }
-
-    // Row 2: "Task 1 of X"
-    char buf[17];
-    snprintf(buf, sizeof(buf), "Task %d of %d", g_current_task, g_task_count);
-    hd44780_gotoxy(&lcd, 0, 2);
-    hd44780_puts(&lcd, buf);
-}
-*/
-
-/*
-static void lcd_task(void *arg) {
-    // init LCD
-    hd44780_init(&lcd);
-    hd44780_clear(&lcd);
-
-    while (1) {
-        if (g_lcd_state == LCD_STATE_WELCOME_SCREEN) {
-            hd44780_clear(&lcd);
-            hd44780_gotoxy(&lcd, 4, 1);
-            hd44780_puts(&lcd, "Welcome");
-            vTaskDelay(pdMS_TO_TICKS(2000));
-            g_lcd_state = LCD_STATE_ASK_TASK_COUNT;
-        } 
-        else if (g_lcd_state == LCD_STATE_ASK_TASK_COUNT) {
-            g_keypad_mode = KEYPAD_MODE_TASK_COUNT;
-            g_task_count_ready = false;
-
-            hd44780_clear(&lcd);
-            hd44780_gotoxy(&lcd, 0, 1);
-            hd44780_puts(&lcd, "Tasks? (0-9)");
-            hd44780_gotoxy(&lcd, 0, 2);
-            hd44780_puts(&lcd, "Enter digit");
-
-            while (!g_task_count_ready) {
-                vTaskDelay(pdMS_TO_TICKS(50));
-            }
-            g_lcd_state = LCD_STATE_CONFIRM_TASK_COUNT;
-        } 
-        else if (g_lcd_state == LCD_STATE_CONFIRM_TASK_COUNT) {
-            hd44780_clear(&lcd);
-            char buf[17];
-
-            hd44780_gotoxy(&lcd, 0, 1);
-            snprintf(buf, sizeof(buf), "%d tasks", g_task_count);
-            hd44780_puts(&lcd, buf);
-
-            hd44780_gotoxy(&lcd, 0, 2);
-            hd44780_puts(&lcd, "Confirm?");
-
-            bool confirmed = wait_for_confirmation(10000);
-            if (confirmed) {
-                g_current_task = 1;
-                g_lcd_state = LCD_STATE_DISPLAY_TASK_ICONS;
-            } else {
-                g_lcd_state = LCD_STATE_ASK_TASK_COUNT;
-            }
-        } 
-        else if (g_lcd_state == LCD_STATE_DISPLAY_TASK_ICONS) {
-            lcd_draw_task_icons();
-            vTaskDelay(pdMS_TO_TICKS(1000));
-            g_lcd_state = LCD_STATE_ASK_TIME_INPUT;
-        } 
-        else if (g_lcd_state == LCD_STATE_ASK_TIME_INPUT) {
-            g_keypad_mode = KEYPAD_MODE_TIME;
-            g_time_digit_index = 0;
-            g_time_ready = false;
-
-            hd44780_clear(&lcd);
-            hd44780_gotoxy(&lcd, 0, 1);
-            hd44780_puts(&lcd, "Enter time");
-            hd44780_gotoxy(&lcd, 0, 2);
-            hd44780_puts(&lcd, "MMSS:");
-
-            while (!g_time_ready) {
-                vTaskDelay(pdMS_TO_TICKS(50));
-            }
-
-            g_entered_minutes = g_time_digits[0] * 10 + g_time_digits[1];
-            g_entered_seconds = g_time_digits[2] * 10 + g_time_digits[3];
-
-            g_lcd_state = LCD_STATE_CONFIRM_TIME;
-        } 
-        else if (g_lcd_state == LCD_STATE_CONFIRM_TIME) {
-            hd44780_clear(&lcd);
-            hd44780_gotoxy(&lcd, 0, 1);
-            hd44780_puts(&lcd, "Start?");
-
-            char buf[17];
-            snprintf(buf, sizeof(buf), "%02d:%02d", g_entered_minutes, g_entered_seconds);
-            hd44780_gotoxy(&lcd, 0, 2);
-            hd44780_puts(&lcd, buf);
-
-            bool confirmed = wait_for_confirmation(10000);
-            if (confirmed) {
-                entered_mins = g_entered_minutes;
-                entered_secs = g_entered_seconds;
-                time_entered = true;
-                g_lcd_state = LCD_STATE_RUNNING;
-            } else {
-                g_lcd_state = LCD_STATE_ASK_TIME_INPUT;
-            }
-        } 
-        else if (g_lcd_state == LCD_STATE_RUNNING) {
-            lcd_draw_task_icons();
-            vTaskDelay(pdMS_TO_TICKS(500));
-        } 
-        else {
-            // This is your 'default' case
-            g_lcd_state = LCD_STATE_WELCOME_SCREEN;
-        }
-
-        vTaskDelay(pdMS_TO_TICKS(10));
-    }
-} 
-*/
-
-
-void study_manager_task(void *arg)
-{
-    int hearts_remaining = 0;
-    int session;
-
-    /* ---------- LCD custom characters ---------- */
-    hd44780_upload_character(&lcd, 0, customCharLeft);
-    hd44780_upload_character(&lcd, 1, customCharRight);
-
-    /* ---------- WELCOME ---------- */
-    hd44780_clear(&lcd);
-    hd44780_gotoxy(&lcd, 2, 1);
-    hd44780_puts(&lcd, "Welcome!");
-    vTaskDelay(pdMS_TO_TICKS(2000));
-
-    /* ---------- ENTER NUMBER OF HEARTS ---------- */
-    hd44780_clear(&lcd);
-    hd44780_gotoxy(&lcd,0,0);
-    hd44780_puts(&lcd,"Enter sessions");
-    hd44780_gotoxy(&lcd,0,1);
-    hd44780_puts(&lcd,"Press # to OK");
-
-    while(!hearts_are_set)
-    {
-        char buf[16];
-        sprintf(buf,"Hearts:%d", HEARTS);
-        hd44780_gotoxy(&lcd,0,2);
-        hd44780_puts(&lcd,buf);
-        vTaskDelay(pdMS_TO_TICKS(200));
-    }
-
-    hearts_remaining = HEARTS;
-
-    /* ---------- MAIN SESSION LOOP ---------- */
-    for(session = 1; session <= HEARTS; session++)
-    {
-        /* ---------- DISPLAY HEARTS ---------- */
-        hd44780_clear(&lcd);
-        hd44780_gotoxy(&lcd,0,0);
-        char buf[32];
-        snprintf(buf,sizeof(buf),"Task %d/%d",session,HEARTS);
-        hd44780_puts(&lcd,buf);
-
-        hd44780_gotoxy(&lcd,0,1);
-
-        for(int i=0;i<hearts_remaining;i++)
-            hd44780_putc(&lcd,1);
-
-        for(int i=hearts_remaining;i<HEARTS;i++)
-            hd44780_putc(&lcd,0);
-
-        vTaskDelay(pdMS_TO_TICKS(2000));
-
-        /* ---------- ENTER TIMER ---------- */
-        hd44780_clear(&lcd);
-        hd44780_gotoxy(&lcd,0,0);
-        hd44780_puts(&lcd,"Enter time MMSS");
-
-        time_entered = false;
-        timer_started = false;
-
-        while(!time_entered)
-            vTaskDelay(pdMS_TO_TICKS(200));
-
-        /* ---------- READY PROMPT ---------- */
-        hd44780_clear(&lcd);
-        hd44780_puts(&lcd,"Ready?");
-        hd44780_gotoxy(&lcd,0,1);
-        hd44780_puts(&lcd,"Flip switch");
-
-        bool ready=false;
-        int elapsed=0;
-
-        while(elapsed < 10000)
-        {
-            if(gpio_get_level(switch_pin))
-            {
-                ready=true;
-                break;
-            }
-
-            elapsed+=200;
-            vTaskDelay(pdMS_TO_TICKS(200));
-        }
-
-        if(!ready)
-        {
-            hd44780_clear(&lcd);
-            hd44780_puts(&lcd,"Not ready");
-            session--;
-            continue;
-        }
-
-        /* ---------- START TIMER ---------- */
-        timer_started = true;
-
-        hd44780_clear(&lcd);
-        hd44780_gotoxy(&lcd,0,0);
-        snprintf(buf,sizeof(buf), "Task %d/%d",session,HEARTS);
-        hd44780_puts(&lcd,buf);
-
-        /* ---------- WAIT UNTIL TIMER ENDS ---------- */
-        while(!timer_finished)
-        {
-            /* skip remaining time */
-            char key = scan_keypad();
-            if(key == '#')
-            {
-                mins = 0;
-                secs = 0;
-                timer_finished = true;
-            }
-
-            vTaskDelay(pdMS_TO_TICKS(100));
-        }
-
-        /* ---------- TASK COMPLETION QUESTION ---------- */
-        hd44780_clear(&lcd);
-        hd44780_puts(&lcd,"Finished?");
-        hd44780_gotoxy(&lcd,0,1);
-        hd44780_puts(&lcd,"Press button");
-
-        bool finished=false;
-
-        for(int i=0;i<50;i++)
-        {
-            if(gpio_get_level(BUTTON)==0)
-            {
-                finished=true;
-                break;
-            }
-
-            vTaskDelay(pdMS_TO_TICKS(100));
-        }
-
-        if(finished)
-        {
-            hd44780_clear(&lcd);
-            hd44780_puts(&lcd,"Great job!");
-
-            for(int i=0;i<5;i++)
-            {
-                hd44780_gotoxy(&lcd,i,1);
-                hd44780_putc(&lcd,1);
-            }
-
-            vTaskDelay(pdMS_TO_TICKS(2000));
-        }
-        else
-        {
-            hearts_remaining--;
-
-            hd44780_clear(&lcd);
-            hd44780_puts(&lcd,"Task failed");
-
-            for(int i=0;i<5;i++)
-            {
-                hd44780_gotoxy(&lcd,i,1);
-                hd44780_putc(&lcd,0);
-            }
-
-            vTaskDelay(pdMS_TO_TICKS(2000));
-        }
-
-        timer_finished=false;
-        timer_started=false;
-    }
-
-    /* ---------- FINAL RESULT ---------- */
-
-    hd44780_clear(&lcd);
-
-    if(hearts_remaining == 0)
-    {
-        hd44780_puts(&lcd,"Keep trying!");
-    }
-    else
-    {
-        hd44780_puts(&lcd,"Well done!");
-    }
-
-    hd44780_gotoxy(&lcd,0,1);
-    hd44780_puts(&lcd,"Stay motivated!");
-
-    while(1)
-        vTaskDelay(pdMS_TO_TICKS(1000));
-}
-
-
+// ---------------- MAIN ----------------
 void app_main()
 {
-    init_switch();
     init_keypad();
-    gpio_init_all();
-    disable_all_digits();
-
-    hd44780_init(&lcd);
-
-    xTaskCreate(keypad_hearts_input_task,"hearts_task",4096,NULL,5,NULL);
-    xTaskCreate(keypad_time_input_task,"time_task",4096,NULL,5,NULL);
-    xTaskCreate(timer_countdown_task,"timer_task",4096,NULL,5,NULL);
-    xTaskCreate(display_task,"7seg_display",4096,NULL,5,NULL);
-
-    xTaskCreate(buzzer_task,"buzzer",2048,NULL,5,NULL);
-
-    xTaskCreate(study_manager_task,"study_manager",8192,NULL,6,NULL);
+    xTaskCreate(lcd_game_task,"lcd_game_task",4096,NULL,5,NULL);
 }

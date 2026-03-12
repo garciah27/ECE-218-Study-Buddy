@@ -1,4 +1,4 @@
-# Install script for directory: C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/managed_components/esp-idf-lib__esp_idf_lib_helpers
+# Install script for directory: C:/Users/hg271/Downloads/ECE_ 218/Studybuddy1/managed_components/esp-idf-lib__esp_idf_lib_helpers
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

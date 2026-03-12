@@ -1,4 +1,4 @@
-# Install script for directory: C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/main
+# Install script for directory: C:/Users/hg271/Downloads/ECE_ 218/Studybuddy1/main
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

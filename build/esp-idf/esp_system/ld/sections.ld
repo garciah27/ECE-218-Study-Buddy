@@ -1,6 +1,6 @@
 /* Automatically generated file; DO NOT EDIT */
 /* Espressif IoT Development Framework Linker Script */
-/* Generated from: C:\Users\hg271\Downloads\ECE_ 218\LCD_display_starter_code-main\build\esp-idf\esp_system\ld\sections.ld.in */
+/* Generated from: C:\Users\hg271\Downloads\ECE_ 218\Studybuddy1\build\esp-idf\esp_system\ld\sections.ld.in */
 
 /*
 

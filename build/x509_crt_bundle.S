@@ -1,4 +1,4 @@
-/* * Data converted from C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/esp-idf/mbedtls/x509_crt_bundle
+/* * Data converted from C:/Users/hg271/Downloads/ECE_ 218/Studybuddy1/build/esp-idf/mbedtls/x509_crt_bundle
  */
 .data
 #if !defined (__APPLE__) && !defined (__linux__)

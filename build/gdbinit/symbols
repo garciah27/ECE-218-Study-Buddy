@@ -13,8 +13,8 @@ end
 
 # Load bootloader symbols
 set confirm off
-    add-symbol-file C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/bootloader/bootloader.elf
+    add-symbol-file C:/Users/hg271/Downloads/ECE_ 218/Studybuddy1/build/bootloader/bootloader.elf
 set confirm on
 
 # Load application symbols
-file C:/Users/hg271/Downloads/ECE_ 218/LCD_display_starter_code-main/build/LCD_display_starter_code.elf
+file C:/Users/hg271/Downloads/ECE_ 218/Studybuddy1/build/LCD_display_starter_code.elf
