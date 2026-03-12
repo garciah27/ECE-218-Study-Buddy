@@ -15,4 +15,10 @@
 * The user interacts with the menu screens by pressing A or B
 * The LCD provides on insructions on how to use the system and interact with the parts
 
+## Important note
+This repository is a subsystem of a project titled "Study Buddy". It is meant to be working side by side with [Timer Display Subsystem]([https://github.com/garciah27/ECE-218-Study-Buddy-LCD-Subsystem-Part](https://github.com/zhumagaa/ECE-218-Study-Buddy-Timer-Display-Subsystem-Part)).
+
+## Wiring
+* Please see attached file for more information on pinout. 
+
 
